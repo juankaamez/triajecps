@@ -263,9 +263,179 @@
       background: linear-gradient(90deg, rgba(255,92,122,.9), rgba(255,204,102,.7), rgba(46,229,157,.7));
       width:40%;
     }
+
+    /* ===========================
+       LEGAL GATE + COPYRIGHT (ES)
+       © 2025 JUAN CARLOS AMEZ RIENDAS
+       (Añadido sin modificar el resto)
+       =========================== */
+    #legalGate{
+      position:fixed;
+      inset:0;
+      z-index:9999;
+      background:rgba(5,8,20,.96);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    #legalGate .box{
+      max-width:940px;
+      width:100%;
+      max-height:90vh;
+      overflow:auto;
+      background: rgba(15,23,48,.92);
+      border:1px solid rgba(32,48,90,.85);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding:16px;
+    }
+    #legalGate h2{margin:0 0 8px 0; font-size:14px; letter-spacing:.2px}
+    #legalGate .legalhead{display:flex; gap:10px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap}
+    #legalGate .copy{font-size:12px; color:var(--muted)}
+    #legalText{
+      width:100%;
+      height:320px;
+      margin:10px 0;
+      background: rgba(10,14,28,.65);
+      color: var(--text);
+      border:1px solid rgba(32,48,90,.85);
+      border-radius: 14px;
+      padding:12px;
+      font-family: var(--mono);
+      font-size:11px;
+      line-height:1.35;
+      resize:none;
+    }
+    #legalGate .checks{display:grid; gap:8px; margin-top:10px}
+    #legalGate .btnrow{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:12px}
+    #legalGate button.primary{background: rgba(124,92,255,.85)}
+    #legalGate button.primary:disabled{opacity:.55}
+    #legalFooter{
+      position:fixed;
+      left:12px;
+      right:12px;
+      bottom:12px;
+      z-index:20;
+      pointer-events:none;
+      display:flex;
+      justify-content:center;
+    }
+    #legalFooter .inner{
+      pointer-events:auto;
+      font-size:11px;
+      color: rgba(138,160,194,.95);
+      border:1px solid rgba(32,48,90,.75);
+      background: rgba(15,23,48,.55);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding:6px 10px;
+      box-shadow: var(--shadow);
+      text-align:center;
+      max-width: min(1100px, 96vw);
+    }
+    #legalFooter .inner a{color:rgba(234,241,255,.9); text-decoration:underline}
   </style>
 </head>
 <body>
+
+<!-- ======================================================
+     BLOQUEO LEGAL OBLIGATORIO (RGPD + LOPDGDD + marco sanitario ES)
+     © 2025 JUAN CARLOS AMEZ RIENDAS — Todos los derechos reservados
+     (Añadido sin modificar el resto)
+     ====================================================== -->
+<div id="legalGate" aria-modal="true" role="dialog">
+  <div class="box">
+    <div class="legalhead">
+      <div>
+        <h2>⚠️ Aviso legal y condiciones de uso</h2>
+        <div class="copy"><b>© 2025 JUAN CARLOS AMEZ RIENDAS — Todos los derechos reservados</b></div>
+      </div>
+      <div class="tag">Acceso condicionado</div>
+    </div>
+
+    <textarea id="legalText" readonly>
+AVISO LEGAL Y CONDICIONES DE USO (ESPAÑA / UE)
+
+1) TITULARIDAD Y PROPIEDAD INTELECTUAL
+El presente software ("Centauro ED — Next Level") es propiedad intelectual de JUAN CARLOS AMEZ RIENDAS.
+© 2025 JUAN CARLOS AMEZ RIENDAS — Todos los derechos reservados.
+Queda prohibida la reproducción, distribución, comunicación pública, transformación o uso comercial total o parcial,
+salvo autorización expresa y por escrito del titular.
+
+2) MARCO NORMATIVO RELEVANTE
+- Reglamento (UE) 2016/679 (RGPD)
+- Ley Orgánica 3/2018, de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD)
+- Ley 41/2002, básica reguladora de la autonomía del paciente y de derechos y obligaciones en materia de información y documentación clínica
+- Ley 44/2003, de ordenación de las profesiones sanitarias
+- Reglamento Europeo de Inteligencia Artificial (AI Act) (aplicable según el caso; el sistema se presenta como apoyo, no autónomo)
+
+3) NATURALEZA DEL SISTEMA (APOYO, NO SUSTITUCIÓN)
+Centauro ED es un sistema experimental de apoyo a la toma de decisiones clínicas y a la estandarización del triaje.
+NO realiza diagnósticos médicos.
+NO prescribe tratamientos.
+NO sustituye el criterio clínico humano.
+Todas las decisiones asistenciales corresponden exclusivamente a profesionales sanitarios legalmente habilitados.
+
+4) PROTECCIÓN DE DATOS (RGPD + LOPDGDD)
+Este software está diseñado para usarse con datos ficticios o anonimizados.
+Queda expresamente prohibido introducir datos personales reales de pacientes (incluida información de salud)
+salvo que el usuario/organización disponga del cumplimiento íntegro del RGPD/LOPDGDD y, en su caso:
+- Base jurídica y deber de información
+- Registro de actividades de tratamiento
+- Evaluación de Impacto (EIPD) cuando proceda
+- Contratos/encargos y medidas de seguridad apropiadas
+El usuario es el único responsable del uso de los datos introducidos.
+
+5) RESPONSABILIDAD Y LIMITACIONES
+El sistema puede contener errores, sesgos o limitaciones y no garantiza resultados clínicos.
+El titular no asume responsabilidad por daños directos o indirectos derivados del uso del sistema,
+especialmente si se utiliza en contexto asistencial real, con datos personales reales o sin validación clínica humana.
+
+6) EXCEPCIÓN EDUCATIVA (USO PERMITIDO SIN PAGO)
+Se autoriza el uso gratuito exclusivamente con fines educativos/formativos cuando concurran TODAS estas condiciones:
+- Sin contraprestación económica directa o indirecta
+- Sin uso asistencial real
+- Con datos ficticios o anonimizados
+- Manteniendo visible el copyright
+Para cualquier uso distinto (incluido uso comercial o asistencial), se requiere autorización expresa.
+
+7) LEGISLACIÓN Y JURISDICCIÓN
+Estas condiciones se rigen por la legislación española.
+Para cualquier controversia, las partes se someten a los juzgados y tribunales de España.
+    </textarea>
+
+    <div class="checks">
+      <label class="check">
+        <input type="checkbox" id="acceptLegal" />
+        <div>
+          <b>He leído y acepto las condiciones legales de uso</b>
+          <div class="muted small">Sin aceptación no se permite el acceso a la aplicación.</div>
+        </div>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="eduOnly" />
+        <div>
+          <b>Confirmo que el uso es exclusivamente educativo y no comercial</b>
+          <div class="muted small">(Marca si aplica; se registra localmente en este navegador.)</div>
+        </div>
+      </label>
+    </div>
+
+    <div class="btnrow">
+      <button id="enterApp" class="primary" disabled>Acceder</button>
+    </div>
+  </div>
+</div>
+
+<!-- Copyright persistente (discreto) -->
+<div id="legalFooter">
+  <div class="inner">
+    © 2025 <b>JUAN CARLOS AMEZ RIENDAS</b> · Todos los derechos reservados · RGPD · LOPDGDD · Sistema de apoyo (no diagnóstico)
+    · <a href="#" id="openLegal">Ver condiciones</a>
+  </div>
+</div>
+
 <header>
   <div class="topbar">
     <div class="brand">
@@ -2010,6 +2180,69 @@ function init(){
   renderAll();
 }
 init();
+</script>
+
+<!-- ======================================================
+     COPYRIGHT / AVISO PERMANENTE
+     (Añadido sin modificar el resto)
+     ====================================================== -->
+<div id="legalFooter">
+  <div class="inner">
+    © 2025 <b>JUAN CARLOS AMEZ RIENDAS</b> · Todos los derechos reservados ·
+    Sistema de apoyo a la decisión clínica (demo) · RGPD · LOPDGDD ·
+    <a href="#" id="openLegal">Aviso legal</a>
+  </div>
+</div>
+
+<script>
+/* ======================================================
+   LEGAL GATE (bloqueo hasta aceptación)
+   (Añadido sin modificar el resto)
+   ====================================================== */
+(function(){
+  const gate = document.getElementById('legalGate');
+  if(!gate) return;
+
+  const accept = document.getElementById('acceptLegal');
+  const edu = document.getElementById('eduOnly');
+  const enter = document.getElementById('enterApp');
+  const open = document.getElementById('openLegal');
+
+  const KEY = 'centauroED:legalAccepted';
+  const EDU = 'centauroED:eduOnly';
+
+  function show(){ gate.style.display = 'flex'; }
+  function hide(){ gate.style.display = 'none'; }
+
+  if(localStorage.getItem(KEY)==='yes'){
+    hide();
+  }else{
+    show();
+  }
+
+  function update(){
+    enter.disabled = !(accept && accept.checked);
+  }
+
+  accept && (accept.onchange = update);
+  edu && (edu.onchange = update);
+  update();
+
+  enter && (enter.onclick = ()=>{
+    if(!(accept && accept.checked)) return;
+    localStorage.setItem(KEY,'yes');
+    localStorage.setItem(EDU,(edu && edu.checked) ? 'yes' : 'no');
+    hide();
+    try{ (window.toast||(()=>{}))('Condiciones aceptadas'); }catch(e){}
+  });
+
+  open && (open.onclick = (e)=>{
+    e.preventDefault();
+    show();
+    const txt = document.getElementById('legalText');
+    if(txt) txt.scrollTop = 0;
+  });
+})();
 </script>
 </body>
 </html>
