@@ -1,0 +1,1622 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- three.js 0.128.0 -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <!-- OrbitControls para three 0.128.0 -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+  <!-- GLTFLoader para three 0.128.0 -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <!-- DRACOLoader para glTF Draco (three 0.128.0) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+
+  <title>Hombro Doloroso — Físico + Didáctico (r128)</title>
+
+  <style>
+    :root { --bg:#0b0e14; --panel:#121826; --text:#e6e9ef; --muted:#aab1c2; --line:#26314f; --good:#6ee7b7; --warn:#fbbf24; --bad:#fb7185; }
+    html, body { height:100%; margin:0; background:var(--bg); color:var(--text); font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    #app { display:flex; height:100%; }
+    #ui { width: 560px; min-width: 360px; max-width: 780px; background: linear-gradient(180deg, rgba(18,24,38,1), rgba(12,14,20,1)); border-right:1px solid var(--line); padding: 14px 12px; overflow:auto; }
+    #view { flex:1; position:relative; }
+    canvas { width:100%; height:100%; display:block; }
+
+    h1 { font-size: 16px; margin: 0 0 8px 0; }
+    h2 { font-size: 12px; margin: 14px 0 8px 0; color: var(--muted); letter-spacing:.06em; text-transform:uppercase; }
+
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .btn { background:#1b2440; border:1px solid #2a3860; color:var(--text); padding:7px 10px; border-radius:10px; cursor:pointer; font-size:12px; }
+    .btn:hover { filter:brightness(1.08); }
+    .btn.secondary { background:#141b2f; border-color:#26314f; color:var(--muted); }
+    .btn.danger { background:#3a1b24; border-color:#6b2a38; }
+    .pill { display:inline-flex; gap:6px; align-items:center; padding:6px 10px; border:1px solid #2a3860; border-radius:999px; background:#141b2f; font-size:12px; cursor:pointer; user-select:none; }
+    .pill input { transform: translateY(1px); }
+    .badge { display:inline-block; padding:3px 8px; border-radius:999px; border:1px solid #2a3860; background:#141b2f; font-size:11px; color:var(--muted); }
+    .warnBox { border: 1px solid #6b5a2a; background: rgba(107,90,42,.18); padding: 8px 10px; border-radius: 12px; font-size: 12px; color: #e9d8a6; margin-bottom: 10px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; }
+    .sep { height:1px; background: var(--line); margin: 10px 0; }
+
+    #drop { border: 1px dashed #3a4a7a; border-radius: 14px; padding: 10px; background: rgba(20,27,47,.25); font-size: 12px; color: var(--muted); }
+    #drop.drag { filter: brightness(1.15); }
+
+    .tabs { display:flex; gap:8px; margin-top:10px; }
+    .tab { padding:7px 10px; border-radius:10px; border:1px solid var(--line); background:#141b2f; cursor:pointer; font-size:12px; color:var(--muted); }
+    .tab.active { background:#1b2440; border-color:#2a3860; color:var(--text); }
+    .panel { display:none; }
+    .panel.active { display:block; }
+
+    .list { display:flex; flex-direction:column; gap:8px; }
+    .item { border:1px solid var(--line); border-radius:14px; padding:10px; background:rgba(20,27,47,.35); cursor:pointer; }
+    .item:hover { filter:brightness(1.08); }
+    .item .name { font-size:13px; margin:0 0 4px 0; }
+    .item .meta { font-size:12px; color:var(--muted); }
+
+    .search { width:100%; box-sizing:border-box; padding:8px 10px; border-radius:12px; border:1px solid var(--line); background:#0e1320; color:var(--text); outline:none; font-size:12px; }
+
+    .kv { display:flex; justify-content:space-between; gap:10px; font-size:12px; color:var(--muted); }
+    .kv b { color:var(--text); font-weight:600; }
+
+    .sliderRow { display:grid; grid-template-columns: 1fr 110px; gap:10px; align-items:center; }
+    .sliderRow label { font-size:12px; color:var(--muted); }
+    input[type="range"] { width:100%; }
+    .val { font-size:12px; color:var(--text); text-align:right; }
+
+    #tooltip { position:absolute; left:12px; bottom:12px; max-width: 780px; background: rgba(18,24,38,.92); border:1px solid var(--line); border-radius: 14px; padding: 10px 12px; pointer-events:none; opacity:0; transform: translateY(6px); transition: all .15s ease; white-space: pre-line; }
+    #tooltip.show { opacity:1; transform: translateY(0); }
+    #tooltip .t1 { font-size: 13px; margin:0 0 4px 0; }
+    #tooltip .t2 { font-size: 12px; color: var(--muted); margin:0; line-height:1.35; }
+
+    #chartWrap { border:1px solid var(--line); border-radius:14px; padding:10px; background:rgba(20,27,47,.35); }
+    #chartWrap .muted { color:var(--muted); font-size:12px; margin: 0 0 8px 0; }
+
+    .scoreBox { border:1px solid var(--line); border-radius:14px; padding:10px; background:rgba(20,27,47,.35); }
+    .scoreGrid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .score { border:1px solid var(--line); border-radius:12px; padding:10px; background:rgba(20,27,47,.35); }
+    .score .t { font-size:12px; color:var(--muted); margin:0 0 6px 0; }
+    .score .n { font-size:20px; font-weight:700; margin:0; }
+    .score .d { font-size:12px; color:var(--muted); margin:6px 0 0 0; line-height:1.35; }
+
+    .sceneBox { border:1px solid var(--line); border-radius:14px; padding:10px; background:rgba(20,27,47,.35); }
+    .sceneTitle { font-size:13px; margin:0 0 6px 0; }
+    .sceneStep { font-size:12px; color:var(--muted); white-space: pre-line; line-height:1.35; margin:0; }
+
+    select { background:#0e1320; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:6px 10px; font-size:12px; }
+  </style>
+</head>
+
+<body>
+<div id="app">
+  <div id="ui">
+    <h1>Hombro Doloroso — Modelo Físico (aprox) + Didáctico (r128)</h1>
+
+    <div class="warnBox">
+      ✅ Modo <b>FÍSICO</b>: aproxima fuerzas (deltoides vs manguito), orientación glenoidea y “estabilidad” por balance.<br>
+      ✅ Modo <b>DIDÁCTICO</b>: explicaciones simplificadas para docencia general.<br>
+      ✅ Sin GLB: dummy para probar. Con GLB: carga y usa “Debug nombres” si no mapea.
+    </div>
+
+    <div class="row" style="justify-content:space-between; margin-bottom:10px;">
+      <div class="row">
+        <span class="badge">Audiencia</span>
+        <select id="audience">
+          <option value="medico">Médicos</option>
+          <option value="fisio">Fisioterapeutas</option>
+          <option value="estudiante" selected>Estudiantes</option>
+          <option value="entrenador">Entrenadores</option>
+        </select>
+      </div>
+      <div class="row">
+        <span class="badge">Modelo</span>
+        <select id="mode">
+          <option value="physical" selected>FÍSICO</option>
+          <option value="didactic">DIDÁCTICO</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="drop">
+      <b>Cargar modelo (.glb)</b><br>
+      Arrastra aquí o elige archivo:
+      <div class="row" style="margin-top:8px">
+        <input id="file" type="file" accept=".glb" />
+        <button class="btn secondary" id="btnUnload">Quitar modelo</button>
+        <button class="btn secondary" id="btnDebug">Debug nombres (console)</button>
+      </div>
+      <div style="margin-top:8px">
+        <span class="badge">Tip</span> Si el modelo no mapea, pulsa Debug y copia 20 nombres → los pegas en NAME_MAP.
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="tab_model">Modelo</div>
+      <div class="tab" data-tab="tab_atlas">Atlas</div>
+      <div class="tab" data-tab="tab_scenes">Escenas clínicas</div>
+    </div>
+
+    <div class="panel active" id="tab_model">
+      <h2>Persona (parámetros anatómicos/funcionales)</h2>
+
+      <div class="sliderRow">
+        <label>Glenoid version (°)  ← retro | ante →</label>
+        <div class="val"><span id="v_gv">0</span>°</div>
+        <input id="s_gv" type="range" min="-20" max="20" step="1" value="0">
+      </div>
+
+      <div class="sliderRow">
+        <label>Glenoid inclination (°)  ← inferior | superior →</label>
+        <div class="val"><span id="v_gi">0</span>°</div>
+        <input id="s_gi" type="range" min="-15" max="15" step="1" value="0">
+      </div>
+
+      <div class="sliderRow">
+        <label>Cápsula (laxitud) 0–100</label>
+        <div class="val"><span id="v_lax">30</span></div>
+        <input id="s_lax" type="range" min="0" max="100" step="1" value="30">
+      </div>
+
+      <div class="sliderRow">
+        <label>Labrum (integridad) 0–100</label>
+        <div class="val"><span id="v_lab">85</span></div>
+        <input id="s_lab" type="range" min="0" max="100" step="1" value="85">
+      </div>
+
+      <div class="sliderRow">
+        <label>Manguito (activación) 0–100</label>
+        <div class="val"><span id="v_cuff">70</span></div>
+        <input id="s_cuff" type="range" min="0" max="100" step="1" value="70">
+      </div>
+
+      <div class="sliderRow">
+        <label>Deltoides (activación) 0–100</label>
+        <div class="val"><span id="v_delt">65</span></div>
+        <input id="s_delt" type="range" min="0" max="100" step="1" value="65">
+      </div>
+
+      <div class="sliderRow">
+        <label>Control escapular 0–100</label>
+        <div class="val"><span id="v_scap">60</span></div>
+        <input id="s_scap" type="range" min="0" max="100" step="1" value="60">
+      </div>
+
+      <h2>Posición / gesto</h2>
+
+      <div class="sliderRow">
+        <label>Abducción (ABD) 0–150°</label>
+        <div class="val"><span id="v_abd">60</span>°</div>
+        <input id="s_abd" type="range" min="0" max="150" step="1" value="60">
+      </div>
+
+      <div class="sliderRow">
+        <label>Rotación externa (ER) -30–120°</label>
+        <div class="val"><span id="v_er">30</span>°</div>
+        <input id="s_er" type="range" min="-30" max="120" step="1" value="30">
+      </div>
+
+      <h2>Acciones</h2>
+      <div class="row">
+        <button class="btn" id="btnResetView">Reset vista</button>
+        <button class="btn secondary" id="btnGhost">Enfoque (ghost)</button>
+        <button class="btn danger" id="btnClear">Clear highlight</button>
+      </div>
+
+      
+      <h2>Manipulación (modelo)</h2>
+      <div class="row" style="flex-wrap:wrap">
+        <button class="btn secondary" id="btnTMove">Mover</button>
+        <button class="btn secondary" id="btnTRotate">Rotar</button>
+        <button class="btn secondary" id="btnTScale">Escalar</button>
+        <span class="badge" id="gizmoStatus">Gizmo: OFF</span>
+      </div>
+
+      <h2>Pose (huesos principales)</h2>
+      <div class="sliderRow">
+        <label>Hombro: Abducción (ABD) 0–120°</label>
+        <div class="val"><span id="v_pose_abd">30</span>°</div>
+        <input id="s_pose_abd" type="range" min="0" max="120" step="1" value="30">
+      </div>
+      <div class="sliderRow">
+        <label>Hombro: Rotación externa (ER) -20–100° (límite depende de ABD)</label>
+        <div class="val"><span id="v_pose_er">20</span>°</div>
+        <input id="s_pose_er" type="range" min="-20" max="100" step="1" value="20">
+      </div>
+      <div class="sliderRow">
+        <label>Codo: Flexión 0–150°</label>
+        <div class="val"><span id="v_pose_elbow">20</span>°</div>
+        <input id="s_pose_elbow" type="range" min="0" max="150" step="1" value="20">
+      </div>
+
+      <h2>Patologías (auto)</h2>
+      <div class="row" style="align-items:center; gap:10px;">
+        <select id="pathologySelect"></select>
+        <button class="btn" id="btnApplyPathology">Aplicar</button>
+        <button class="btn secondary" id="btnClearPathology">Limpiar</button>
+      </div>
+      <div class="sceneBox" style="margin-top:10px;">
+        <p class="sceneTitle" id="pathTitle">—</p>
+        <p class="sceneStep" id="pathInfo">Selecciona una patología y pulsa Aplicar.</p>
+      </div>
+
+      <h2>Riesgo de inestabilidad (salida)</h2>
+      <div class="scoreBox">
+        <div class="scoreGrid">
+          <div class="score">
+            <p class="t">Anterior</p>
+            <p class="n" id="score_ant">—</p>
+            <p class="d" id="desc_ant">—</p>
+          </div>
+          <div class="score">
+            <p class="t">Posterior</p>
+            <p class="n" id="score_post">—</p>
+            <p class="d" id="desc_post">—</p>
+          </div>
+          <div class="score">
+            <p class="t">Inferior</p>
+            <p class="n" id="score_inf">—</p>
+            <p class="d" id="desc_inf">—</p>
+          </div>
+          <div class="score">
+            <p class="t">MDI (multi)</p>
+            <p class="n" id="score_mdi">—</p>
+            <p class="d" id="desc_mdi">—</p>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="kv"><span>Lectura:</span><b id="summary">—</b></div>
+      </div>
+
+      <h2>Gráfico</h2>
+      <div id="chartWrap">
+        <p class="muted">Riesgo (0–100) por dirección.</p>
+        <canvas id="chart" style="height:180px;"></canvas>
+      </div>
+    </div>
+
+    <div class="panel" id="tab_atlas">
+      <h2>Capas</h2>
+      <div id="layers" class="list"></div>
+
+      <h2>Buscar estructura</h2>
+      <input class="search" id="search" placeholder="Ej: labrum, IGHL, cápsula, plexo..." />
+      <div id="structures" class="list" style="margin-top:10px"></div>
+
+      <div class="sep"></div>
+      <div class="kv"><span>Selección:</span><b id="selName">—</b></div>
+      <div class="kv"><span>ID:</span><b id="selId" class="mono">—</b></div>
+    </div>
+
+    <div class="panel" id="tab_scenes">
+      <h2>Escenas clínicas</h2>
+      <div id="scenes" class="list"></div>
+
+      <h2>Reproductor</h2>
+      <div class="sceneBox">
+        <div class="row" style="justify-content:space-between">
+          <div>
+            <p class="sceneTitle" id="sceneTitle">—</p>
+            <span class="badge" id="sceneBadge">—</span>
+          </div>
+          <div class="row">
+            <button class="btn secondary" id="btnPrevStep">Prev</button>
+            <button class="btn" id="btnNextStep">Next</button>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <p class="sceneStep" id="sceneStep">Elige una escena para empezar.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="view">
+    <div id="tooltip">
+      <p class="t1" id="ttTitle"></p>
+      <p class="t2" id="ttDesc"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== audience + mode ===== */
+const AUD = { medico:"medico", fisio:"fisio", estudiante:"estudiante", entrenador:"entrenador" };
+let audience = document.getElementById("audience").value;
+let mode = document.getElementById("mode").value;
+
+document.getElementById("audience").addEventListener("change", e => { audience = e.target.value; renderScores(); if (currentScene) renderSceneStep(); });
+document.getElementById("mode").addEventListener("change", e => { mode = e.target.value; renderScores(); if (currentScene) renderSceneStep(); });
+
+function explain(block){ return (block && block[audience]) ? block[audience] : (block?.estudiante ?? ""); }
+
+/* ===== labels / layers ===== */
+const LAYER_ORDER = ["BONES","JOINTS","CAPSULE","LABRUM","BURSA","LIGAMENTS","MUSCLES","TENDONS","NERVES"];
+const layerState = Object.fromEntries(LAYER_ORDER.map(k => [k, k==="BONES"]));
+
+const LABELS = [
+  {id:"b_scapula", layer:"BONES", name:"Escápula"},
+  {id:"b_glenoid", layer:"BONES", name:"Glenoides"},
+  {id:"b_humerus", layer:"BONES", name:"Húmero"},
+  {id:"b_clavicle", layer:"BONES", name:"Clavícula"},
+  {id:"b_acromion", layer:"BONES", name:"Acromion"},
+  {id:"c_gh", layer:"CAPSULE", name:"Cápsula GH"},
+  {id:"lb_glenoid", layer:"LABRUM", name:"Labrum glenoideo"},
+  {id:"l_ighl_ant", layer:"LIGAMENTS", name:"IGHL banda anterior"},
+  {id:"l_ighl_post", layer:"LIGAMENTS", name:"IGHL banda posterior"},
+  {id:"m_supraspinatus", layer:"MUSCLES", name:"Supraespinoso"},
+  {id:"m_infraspinatus", layer:"MUSCLES", name:"Infraespinoso"},
+  {id:"m_subscapularis", layer:"MUSCLES", name:"Subescapular"},
+  {id:"m_serratus_anterior", layer:"MUSCLES", name:"Serrato anterior"},
+  {id:"m_trap_lower", layer:"MUSCLES", name:"Trapecio inferior"},
+  {id:"t_biceps_long", layer:"TENDONS", name:"Tendón bíceps (PL)"},
+  {id:"n_brachial_plexus", layer:"NERVES", name:"Plexo braquial"},
+  {id:"n_axillary", layer:"NERVES", name:"Nervio axilar"},
+];
+const labelById = new Map(LABELS.map(x => [x.id, x]));
+
+/* ===== name map ===== */
+const NAME_MAP = {
+  "Scapula":"b_scapula","RightScapula":"b_scapula","Scapula_R":"b_scapula",
+  "Glenoid":"b_glenoid","GlenoidFossa":"b_glenoid","Cavitas glenoidalis":"b_glenoid",
+  "Humerus":"b_humerus","RightHumerus":"b_humerus","Humerus_R":"b_humerus",
+  "Clavicle":"b_clavicle","Clavicula":"b_clavicle","Clavicle_R":"b_clavicle",
+  "Acromion":"b_acromion",
+  "GlenohumeralCapsule":"c_gh","Capsule_GH":"c_gh",
+  "Labrum":"lb_glenoid","GlenoidLabrum":"lb_glenoid","Labrum glenoidale scapulae":"lb_glenoid",
+  "IGHL anterior band":"l_ighl_ant","IGHL posterior band":"l_ighl_post",
+  "Supraspinatus":"m_supraspinatus","Infraspinatus":"m_infraspinatus","Subscapularis":"m_subscapularis",
+  "Serratus anterior":"m_serratus_anterior","Trapezius lower":"m_trap_lower",
+  "Long head biceps tendon":"t_biceps_long","Biceps long head tendon":"t_biceps_long",
+  "Brachial plexus":"n_brachial_plexus","Axillary nerve":"n_axillary"
+};
+
+/* ===== tabs ===== */
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    document.getElementById(t.dataset.tab).classList.add("active");
+  });
+});
+
+/* ===== three core ===== */
+const viewEl = document.getElementById("view");
+const tooltipEl = document.getElementById("tooltip");
+const ttTitle = document.getElementById("ttTitle");
+const ttDesc  = document.getElementById("ttDesc");
+const selNameEl = document.getElementById("selName");
+const selIdEl   = document.getElementById("selId");
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0e14);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 200);
+camera.position.set(0.55, 0.35, 0.75);
+
+const renderer = new THREE.WebGLRenderer({ antialias:false, powerPreference:"high-performance" });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+viewEl.appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.target.set(0, 0.15, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(2,2,1); scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(-2,0.2,-1.5); scene.add(fill);
+
+// ===== Draco support (required for many compressed GLBs) =====
+const dracoLoader = new THREE.DRACOLoader();
+// Use Google's hosted Draco decoders (works over http.server)
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+
+function createGLTFLoader() {
+  // IMPORTANT: instantiate THREE.GLTFLoader (do NOT call this factory recursively)
+  const loader = new THREE.GLTFLoader();
+  loader.setDRACOLoader(dracoLoader);
+  return loader;
+}
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+const meshById = new Map();
+const pickables = [];
+const originalMaterials = new Map();
+
+let rootModel = null;
+let selected = null;
+let ghostMode = false;
+let glenoidGroup = null;
+
+function setTooltip(show, title="", desc=""){ ttTitle.textContent = title; ttDesc.textContent = desc; tooltipEl.classList.toggle("show", !!show); }
+function clearSelectionUI(){ selNameEl.textContent = "—"; selIdEl.textContent = "—"; setTooltip(false); }
+function setSelectionUI(id){ const lab = labelById.get(id); selNameEl.textContent = lab ? lab.name : id; selIdEl.textContent = id; setTooltip(true, lab ? lab.name : id, ""); }
+
+function resize(){
+  const w = viewEl.clientWidth, h = viewEl.clientHeight;
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+  renderer.setSize(w,h,false);
+}
+window.addEventListener("resize", resize);
+
+function applyLayerVisibility(){
+  for (const [id,obj] of meshById.entries()){
+    const lab = labelById.get(id);
+    if (!lab) continue;
+    obj.visible = !!layerState[lab.layer];
+  }
+}
+
+function setGhost(on, keepIds=[]){
+  ghostMode = on;
+  const keep = new Set(keepIds);
+  for (const obj of pickables){
+    const mat = obj.material;
+    if (!mat) continue;
+    mat.transparent = true;
+    mat.opacity = on ? (keep.has(obj.name) ? 1.0 : 0.18) : 1.0;
+  }
+}
+
+function restoreMaterials(){
+  // Fast restore: undo emissive highlight without cloning materials
+  for (const m of highlightedMeshes){
+    const st = highlightState.get(m);
+    if (st && m.material && m.material.emissive){
+      m.material.emissive.copy(st.emissive);
+      m.material.emissiveIntensity = st.emissiveIntensity;
+    }
+  }
+  highlightedMeshes.length = 0;
+}
+
+const highlightState = new Map();   // mesh -> {emissive:Color, emissiveIntensity:number}
+const highlightedMeshes = [];
+
+function highlight(ids){
+  // Avoid heavy material cloning (perf): use emissive only
+  restoreMaterials();
+  const keep = new Set(ids);
+  for (const m of pickables){
+    if (!keep.has(m.name)) continue;
+    const mat = m.material;
+    if (!mat || !mat.emissive) continue;
+    if (!highlightState.has(m)){
+      highlightState.set(m, { emissive: mat.emissive.clone(), emissiveIntensity: mat.emissiveIntensity || 0 });
+    }
+    mat.emissive.set(0xffffff);
+    mat.emissiveIntensity = 0.35;
+    highlightedMeshes.push(m);
+  }
+  if (ghostMode) setGhost(true, ids);
+}
+
+function clearHighlight(){
+  restoreMaterials();
+  if (ghostMode) setGhost(true, selected ? [selected.name] : []);
+}
+
+function frameToModel(){
+  if (!rootModel) return;
+  const box = new THREE.Box3().setFromObject(rootModel);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  const maxDim = Math.max(size.x,size.y,size.z);
+  const dist = maxDim * 1.4;
+  camera.position.set(center.x + dist, center.y + dist*0.6, center.z + dist);
+  controls.target.copy(center);
+  controls.update();
+}
+
+function pick(event){
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(pickables.filter(m=>m.visible), true);
+  if (!hits.length) return null;
+  for (const h of hits) if (labelById.has(h.object.name)) return h.object;
+  return hits[0].object;
+}
+
+renderer.domElement.addEventListener("pointerdown", (e)=>{
+  const obj = pick(e);
+  if (!obj) return;
+  selected = obj;
+  setSelectionUI(obj.name);
+  highlight([obj.name]);
+  if (window.ShoulderX && typeof window.ShoulderX.onSelect === "function") {
+    window.ShoulderX.onSelect(obj);
+  }
+});
+
+/* ===== UI builders ===== */
+function buildLayersUI(){
+  const el = document.getElementById("layers");
+  el.innerHTML = "";
+  for (const layer of LAYER_ORDER){
+    const div = document.createElement("label");
+    div.className = "pill";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!layerState[layer];
+    cb.addEventListener("change", ()=>{ layerState[layer]=cb.checked; applyLayerVisibility(); });
+    const sp = document.createElement("span"); sp.textContent = layer;
+    div.appendChild(cb); div.appendChild(sp);
+    el.appendChild(div);
+  }
+}
+
+function buildStructuresUI(filterText=""){
+  const el = document.getElementById("structures");
+  el.innerHTML = "";
+  const q = (filterText||"").trim().toLowerCase();
+  const list = LABELS.filter(s => !q || s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
+  for (const s of list){
+    const item = document.createElement("div");
+    item.className = "item";
+    item.innerHTML = `<div class="name">${s.name}</div><div class="meta">${s.layer} · <span class="mono">${s.id}</span></div>`;
+    item.addEventListener("click", ()=>{
+      for (const L of LAYER_ORDER) layerState[L] = (L==="BONES") || (L===s.layer);
+      buildLayersUI();
+      applyLayerVisibility();
+      highlight([s.id]);
+      setSelectionUI(s.id);
+    });
+    el.appendChild(item);
+  }
+}
+document.getElementById("search").addEventListener("input", (e)=> buildStructuresUI(e.target.value));
+
+/* ===== model load + dummy ===== */
+function resetCaches(){
+  meshById.clear();
+  pickables.length = 0;
+  originalMaterials.clear();
+  selected = null;
+  clearSelectionUI();
+  glenoidGroup = null;
+}
+
+function registerObject(obj){
+  if (!obj.name) return;
+  if (NAME_MAP[obj.name]) obj.name = NAME_MAP[obj.name];
+  if (labelById.has(obj.name)){
+    meshById.set(obj.name, obj);
+    if (obj.isMesh){
+      pickables.push(obj);
+      originalMaterials.set(obj, obj.material);
+    }
+  }
+}
+
+function tryBuildBiomechGroups(){
+  const scap = meshById.get("b_scapula");
+  const glen = meshById.get("b_glenoid");
+  if (!(scap && glen)) return;
+
+  glenoidGroup = new THREE.Group();
+  glenoidGroup.name = "glenoidGroup";
+
+  const box = new THREE.Box3().setFromObject(scap);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  glenoidGroup.position.copy(center);
+
+  const toReparent = [scap, glen];
+  for (const o of toReparent){
+    const wp = new THREE.Vector3(); o.getWorldPosition(wp);
+    const wq = new THREE.Quaternion(); o.getWorldQuaternion(wq);
+    const ws = new THREE.Vector3(); o.getWorldScale(ws);
+
+    scene.attach(o);
+    glenoidGroup.add(o);
+
+    o.position.copy(wp).sub(center);
+    o.quaternion.copy(wq);
+    o.scale.copy(ws);
+  }
+  rootModel.add(glenoidGroup);
+}
+
+function createFallbackDummy(){
+  const g = new THREE.Group();
+  const geo = new THREE.SphereGeometry(0.055, 24, 18);
+  function mk(name,x,y,z,scale=1,color=0x7a859f){
+    const mat = new THREE.MeshStandardMaterial({ color, roughness:0.85, metalness:0.05 });
+    const m = new THREE.Mesh(geo, mat);
+    m.name = name; m.position.set(x,y,z); m.scale.setScalar(scale);
+    return m;
+  }
+  g.add(mk("b_scapula", 0.00,0.18,0.00, 1.15));
+  g.add(mk("b_glenoid", 0.03,0.15,0.00, 0.55));
+  g.add(mk("b_acromion", 0.03,0.22,0.03, 0.65));
+  g.add(mk("b_humerus", 0.11,0.12,0.06, 1.05));
+  g.add(mk("b_clavicle", 0.03,0.26,0.02, 0.80));
+  g.add(mk("c_gh", 0.06,0.14,0.02, 0.70, 0x9bd98e));
+  g.add(mk("lb_glenoid", 0.04,0.14,0.00, 0.45, 0xe6a8b6));
+  g.add(mk("l_ighl_ant", 0.05,0.13,0.03, 0.30, 0xd9c98e));
+  g.add(mk("l_ighl_post", 0.03,0.13,-0.02, 0.30, 0xd9c98e));
+  g.add(mk("m_supraspinatus", 0.03,0.19,-0.03, 0.55, 0xa6d98e));
+  g.add(mk("m_serratus_anterior", -0.03,0.16,0.09, 0.55, 0xa6d98e));
+  g.add(mk("m_trap_lower", -0.10,0.20,-0.05, 0.55, 0xa6d98e));
+  g.add(mk("t_biceps_long", 0.09,0.16,0.04, 0.42, 0xc9b7ff));
+  g.add(mk("n_brachial_plexus", -0.01,0.19,0.10, 0.42, 0xffc36e));
+  g.add(mk("n_axillary", 0.08,0.14,0.09, 0.35, 0xffc36e));
+  return g;
+}
+
+function setModel(newRoot){
+  if (rootModel) scene.remove(rootModel);
+  rootModel = newRoot;
+  scene.add(rootModel);
+
+  resetCaches();
+  rootModel.traverse(registerObject);
+
+  applyLayerVisibility();
+  tryBuildBiomechGroups();
+  frameToModel();
+
+  const mapped = meshById.size;
+  if (mapped === 0){
+    setTooltip(true, "Modelo cargado, pero sin mapeo", "Pulsa Debug nombres (console) para ver nombres reales del GLB.\nAñade esos nombres a NAME_MAP.");
+  } else {
+    setTooltip(true, "Modelo cargado ✅", "Estructuras mapeadas: " + mapped);
+  }
+
+  applyBiomechTransforms();
+  renderScores();
+}
+
+function unloadModel(){
+  setModel(createFallbackDummy());
+  setTooltip(true, "Modo dummy", "No hay GLB cargado.\nArrastra un .glb para anatomía real.");
+}
+
+function loadGLB(url){
+  const loader = createGLTFLoader();
+  setTooltip(true, "Cargando modelo…", url);
+  loader.load(url, (gltf)=>{
+    setModel(gltf.scene);
+  }, undefined, (err)=>{
+    console.error(err);
+    unloadModel();
+    setTooltip(true, "No se pudo cargar el GLB por URL", "Asegúrate de abrir con servidor local (http://localhost:8000/) y que exista:\n" + url + "\n\nDetalle: " + String(err));
+  });
+}
+
+
+
+document.getElementById("btnUnload").addEventListener("click", unloadModel);
+
+document.getElementById("file").addEventListener("change", (ev)=>{
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  const url = URL.createObjectURL(f);
+  const loader = createGLTFLoader();
+  loader.load(url, (gltf)=>{
+    URL.revokeObjectURL(url);
+    setModel(gltf.scene);
+  }, undefined, (err)=>{
+    URL.revokeObjectURL(url);
+    console.error(err);
+    setTooltip(true, "Error cargando GLB", String(err));
+  });
+});
+
+const drop = document.getElementById("drop");
+["dragenter","dragover"].forEach(evt => drop.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); drop.classList.add("drag"); }));
+["dragleave","drop"].forEach(evt => drop.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); drop.classList.remove("drag"); }));
+drop.addEventListener("drop", (e)=>{
+  e.preventDefault(); e.stopPropagation();
+  drop.classList.remove("drag");
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (!f) return;
+  if (!f.name.toLowerCase().endsWith(".glb")){
+    setTooltip(true, "Eso no es un .glb", "Arrastra un archivo .glb (binario glTF).");
+    return;
+  }
+  const url = URL.createObjectURL(f);
+  const loader = createGLTFLoader();
+  loader.load(url, (gltf)=>{
+    URL.revokeObjectURL(url);
+    setModel(gltf.scene);
+  }, undefined, (err)=>{
+    URL.revokeObjectURL(url);
+    console.error(err);
+    setTooltip(true, "Error cargando GLB", String(err));
+  });
+});
+
+document.getElementById("btnDebug").addEventListener("click", ()=>{
+  if (!rootModel) { console.warn("No model loaded"); return; }
+  const names = [];
+  rootModel.traverse(o => { if (o.name) names.push(o.name); });
+  names.sort();
+  console.log("=== GLB Object Names (sorted) ===");
+  console.log(names.join("\n"));
+  console.log("Total:", names.length);
+  setTooltip(true, "Debug enviado a Console", "Abre F12 → Console y copia 20 nombres.\nLuego los metes en NAME_MAP.");
+});
+
+/* ===== buttons ===== */
+document.getElementById("btnResetView").addEventListener("click", frameToModel);
+document.getElementById("btnGhost").addEventListener("click", ()=>{
+  ghostMode = !ghostMode;
+  if (!ghostMode) setGhost(false);
+  else setGhost(true, selected ? [selected.name] : []);
+});
+document.getElementById("btnClear").addEventListener("click", ()=>{
+  selected = null;
+  clearHighlight();
+  clearSelectionUI();
+});
+
+/* ===== chart ===== */
+const chart = new Chart(document.getElementById("chart").getContext("2d"), {
+  type:"bar",
+  data:{ labels:["Anterior","Posterior","Inferior","MDI"], datasets:[{ label:"Riesgo", data:[0,0,0,0] }] },
+  options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, max:100 } }, plugins:{ legend:{ display:false } } }
+});
+function updateChart(a,p,i,m){ if (!chart) return;  chart.data.datasets[0].data = [a,p,i,m].map(x => Math.round(x)); chart.update();  }
+
+
+
+/* ===== sliders/state ===== */
+const state = { gv:0, gi:0, lax:30, lab:85, cuff:70, delt:65, scap:60, abd:60, er:30 };
+
+function hookSlider(id, key, outId){
+  const s = document.getElementById(id);
+  const out = document.getElementById(outId);
+  function sync(){
+    state[key] = Number(s.value);
+    out.textContent = s.value;
+    applyBiomechTransforms();
+    renderScores();
+  }
+  s.addEventListener("input", sync);
+  sync();
+}
+hookSlider("s_gv","gv","v_gv");
+hookSlider("s_gi","gi","v_gi");
+hookSlider("s_lax","lax","v_lax");
+hookSlider("s_lab","lab","v_lab");
+hookSlider("s_cuff","cuff","v_cuff");
+hookSlider("s_delt","delt","v_delt");
+hookSlider("s_scap","scap","v_scap");
+hookSlider("s_abd","abd","v_abd");
+hookSlider("s_er","er","v_er");
+
+function deg2rad(d){ return d * Math.PI / 180; }
+function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+
+function applyBiomechTransforms(){
+  if (!glenoidGroup) return;
+  const abdN = clamp01(state.abd / 150);
+  const scapControl = clamp01(state.scap / 100);
+  const penalty = (1 - scapControl) * abdN;
+
+  const gv = deg2rad(state.gv);
+  const gi = deg2rad(state.gi);
+  const extraYaw = deg2rad(6) * penalty;
+  const extraPitch = deg2rad(8) * penalty;
+
+  glenoidGroup.rotation.set(gi + extraPitch, gv + extraYaw, 0);
+}
+
+/* ===== scores (physical + didactic) ===== */
+function riskColor(r){
+  if (r < 33) return "var(--good)";
+  if (r < 66) return "var(--warn)";
+  return "var(--bad)";
+}
+
+function computePhysicalRisks(s){
+  const abd = deg2rad(s.abd);
+  const er  = deg2rad(s.er);
+
+  const cuff = clamp01(s.cuff/100);
+  const delt = clamp01(s.delt/100);
+  const lab  = clamp01(s.lab/100);
+  const lax  = clamp01(s.lax/100);
+  const scap = clamp01(s.scap/100);
+
+  const gv = deg2rad(s.gv);
+  const gi = deg2rad(s.gi);
+
+  const Fd = delt * (0.35 + 0.65*Math.sin(abd));
+  const Fc = cuff * (0.55 + 0.45*scap);
+
+  const concavity = 0.25 + 0.75*lab;
+  const S_comp = Fc * concavity;
+  const S_pass = (0.45 + 0.55*lab) * (1 - 0.85*lax);
+
+  const abdN = clamp01(s.abd/150);
+  const scapPenalty = (1 - scap) * abdN;
+  const S_scap = 1 - 0.55*scapPenalty;
+
+  const S_total = (S_comp + S_pass) * S_scap;
+
+  const D_sup = Fd;
+  const D_inf = (0.20 + 0.80*lax) * (0.40 + 0.60*Math.sin(abd));
+
+  const biasAnt = clamp01(0.5 + (gv / deg2rad(40)));
+  const biasPost = 1 - biasAnt;
+
+  const biasInf = clamp01(0.5 - (gi / deg2rad(30)));
+
+  const apprehension = clamp01((Math.sin(abd) * (0.25 + 0.75*clamp01((s.er+30)/150))) );
+  const posteriorLoad = clamp01(Math.sin(abd) * (1 - cuff) * (0.35 + 0.65*(1-biasAnt)));
+
+  const D_ant = (0.55*D_sup + 0.35*apprehension + 0.25*lax) * biasAnt;
+  const D_post = (0.55*D_sup + 0.25*posteriorLoad + 0.25*lax) * biasPost;
+  const D_inferior = (0.35*D_inf + 0.15*D_sup) * biasInf + 0.25*lax;
+
+  function toRisk(D){
+    const raw = (D - 0.75*S_total);
+    return 100 * clamp01(0.5 + 0.9*raw);
+  }
+
+  let ant = toRisk(D_ant);
+  let post = toRisk(D_post);
+  let inf = toRisk(D_inferior);
+  let mdi = 100 * clamp01(0.15 + 0.70*lax + 0.30*(1-cuff) + 0.20*(1-scap) + 0.20*(1-lab));
+
+  const explainObj = {
+    ant_phys:{ medico:`Balance físico: ↑ con ABD+ER + anteversión + laxitud + cuff bajo.`, fisio:`ABD+ER: si el cuff no centra, sube el shear anterior.`, estudiante:`Brazo alto + ER = más riesgo delante si falta control.`, entrenador:`Overhead con ER alto + poco control → riesgo anterior.` },
+    post_phys:{ medico:`↑ con retroversión + cuff bajo + carga elevada.`, fisio:`Reforzar rotadores externos + control escapular.`, estudiante:`Si la glena mira atrás y control es bajo, sube riesgo posterior.`, entrenador:`Bench/press pesado puede irritar posterior en algunos.` },
+    inf_phys:{ medico:`Muy dependiente de laxitud + elevación.`, fisio:`Laxitud + elevación: más “colgado”.`, estudiante:`Cápsula laxa → tiende a bajar más.`, entrenador:`Hiperlaxitud: ojo con rangos extremos.` },
+    mdi_phys:{ medico:`MDI: laxitud alta + control dinámico bajo (cuff/escápula/labrum).`, fisio:`MDI: propriocepción + fuerza + control (meses).`, estudiante:`MDI = inestabilidad en varias direcciones.`, entrenador:`Primero estabilidad, luego carga.` },
+    ant_did:{}, post_did:{}, inf_did:{}, mdi_did:{}
+  };
+
+  return { ant, post, inf, mdi, explain: explainObj };
+}
+
+function computeDidacticRisks(s){
+  const gv = s.gv, gi = s.gi;
+  const lax = s.lax/100, lab = s.lab/100, cuff = s.cuff/100, scap = s.scap/100;
+  const abd = s.abd/150, er = (s.er+30)/150;
+
+  let ant = 100 * clamp01(0.15 + 0.55*abd*er + 0.25*clamp01(gv/20) + 0.35*lax + 0.25*(1-cuff) + 0.15*(1-lab));
+  let post = 100 * clamp01(0.12 + 0.45*abd*(1-cuff) + 0.25*clamp01((-gv)/20) + 0.30*lax + 0.10*(1-scap));
+  let inf = 100 * clamp01(0.10 + 0.55*lax + 0.35*abd + 0.15*(1-lab) + 0.10*clamp01(gi/15));
+  let mdi = 100 * clamp01(0.10 + 0.75*lax + 0.25*(1-cuff) + 0.20*(1-scap) + 0.20*(1-lab));
+
+  const explainObj = {
+    ant_phys:{}, post_phys:{}, inf_phys:{}, mdi_phys:{},
+    ant_did:{ medico:`Didáctico: ↑ con ABD+ER + anteversión + laxitud + labrum/cuff bajo.`, fisio:`Didáctico: controla ABD+ER y fortalece cuff.`, estudiante:`Didáctico: brazo alto + ER = más riesgo delante.`, entrenador:`Didáctico: evita extremos al inicio.` },
+    post_did:{ medico:`Didáctico: ↑ con retroversión + cuff bajo + estrés en empujes.`, fisio:`Didáctico: refuerza ER y control escapular.`, estudiante:`Didáctico: glena mirando atrás puede dar síntomas posteriores.`, entrenador:`Didáctico: ajusta bench si hay dolor posterior.` },
+    inf_did:{ medico:`Didáctico: ↑ con laxitud y elevación.`, fisio:`Didáctico: estabilidad global + progresión.`, estudiante:`Didáctico: laxitud = “cuelga” más.`, entrenador:`Didáctico: ojo con colgarse.` },
+    mdi_did:{ medico:`Didáctico: MDI ↑ si todo está laxo y control muscular bajo.`, fisio:`Didáctico: rehab largo.`, estudiante:`Didáctico: inestable en varias direcciones.`, entrenador:`Didáctico: primero estabilidad.` }
+  };
+
+  return { ant, post, inf, mdi, explain: explainObj };
+}
+
+function renderScores(){
+  const antEl = document.getElementById("score_ant");
+  const postEl = document.getElementById("score_post");
+  const infEl = document.getElementById("score_inf");
+  const mdiEl = document.getElementById("score_mdi");
+  const dAnt = document.getElementById("desc_ant");
+  const dPost = document.getElementById("desc_post");
+  const dInf = document.getElementById("desc_inf");
+  const dMdi = document.getElementById("desc_mdi");
+  const summary = document.getElementById("summary");
+
+  const phys = computePhysicalRisks(state);
+  const dida = computeDidacticRisks(state);
+  const R = (mode === "physical") ? phys : dida;
+
+  antEl.textContent = Math.round(R.ant);
+  postEl.textContent = Math.round(R.post);
+  infEl.textContent = Math.round(R.inf);
+  mdiEl.textContent = Math.round(R.mdi);
+
+  antEl.style.color = riskColor(R.ant);
+  postEl.style.color = riskColor(R.post);
+  infEl.style.color = riskColor(R.inf);
+  mdiEl.style.color = riskColor(R.mdi);
+
+  dAnt.textContent = (mode === "physical") ? explain(R.explain.ant_phys) : explain(R.explain.ant_did);
+  dPost.textContent = (mode === "physical") ? explain(R.explain.post_phys) : explain(R.explain.post_did);
+  dInf.textContent = (mode === "physical") ? explain(R.explain.inf_phys) : explain(R.explain.inf_did);
+  dMdi.textContent = (mode === "physical") ? explain(R.explain.mdi_phys) : explain(R.explain.mdi_did);
+
+  const top = [
+    {k:"Anterior", v:R.ant},{k:"Posterior", v:R.post},{k:"Inferior", v:R.inf},{k:"MDI", v:R.mdi},
+  ].sort((a,b)=>b.v-a.v)[0];
+  summary.textContent = `Mayor riesgo: ${top.k} (${Math.round(top.v)}/100) · modo ${mode.toUpperCase()}`;
+
+  if (top.k === "Anterior") highlight(["lb_glenoid","l_ighl_ant","c_gh"]);
+  else if (top.k === "Posterior") highlight(["lb_glenoid","l_ighl_post","c_gh"]);
+  else if (top.k === "Inferior") highlight(["c_gh","lb_glenoid"]);
+  else highlight(["c_gh","lb_glenoid","l_ighl_ant","l_ighl_post"]);
+
+  updateChart(R.ant, R.post, R.inf, R.mdi);
+}
+
+/* ===== scenes (mínimo) ===== */
+const SCENES = [
+  { id:"s_mdi", title:"Caso — Inestabilidad multidireccional (MDI)", badge:"MDI", steps:[
+    { focus:["c_gh","lb_glenoid","l_ighl_ant","l_ighl_post"], layers:["CAPSULE","LABRUM","LIGAMENTS","BONES"],
+      textByAudience:{
+        medico:"MDI: sube Laxitud y baja Cuff/Labrum para ver el riesgo.\nRehab prolongada; criterios de derivación si falla.",
+        fisio:"MDI: control + fuerza + propiocepción (meses). Ajusta carga.",
+        estudiante:"MDI: inestable en varias direcciones. Prueba con sliders.",
+        entrenador:"Hiperlaxitud: primero técnica/estabilidad; evita extremos."
+      }
+    }
+  ]},
+  { id:"s_app", title:"Caso — ABD+ER (aprensión anterior)", badge:"Anterior", steps:[
+    { focus:["lb_glenoid","l_ighl_ant","c_gh"], layers:["LABRUM","LIGAMENTS","CAPSULE","BONES"],
+      textByAudience:{
+        medico:"ABD+ER: posición de riesgo anterior. Ajusta ABD/ER y versión glenoidea.",
+        fisio:"Dosificar ABD+ER; fortalecer cuff; control escapular.",
+        estudiante:"Brazo alto + girado fuera = más riesgo delante.",
+        entrenador:"Evita rangos extremos con fatiga; progresión por fases."
+      }
+    }
+  ]}
+];
+
+function buildScenesListUI(){
+  const el = document.getElementById("scenes");
+  el.innerHTML = "";
+  for (const s of SCENES){
+    const item = document.createElement("div");
+    item.className = "item";
+    item.innerHTML = `<div class="name">${s.title}</div><div class="meta"><span class="badge">${s.badge}</span> · pasos: ${s.steps.length}</div>`;
+    item.addEventListener("click", ()=> startScene(s.id));
+    el.appendChild(item);
+  }
+}
+let currentScene = null;
+let sceneStepIndex = 0;
+
+function startScene(sceneId){
+  currentScene = SCENES.find(s=>s.id===sceneId) || null;
+  sceneStepIndex = 0;
+  renderSceneStep();
+}
+function renderSceneStep(){
+  const titleEl = document.getElementById("sceneTitle");
+  const badgeEl = document.getElementById("sceneBadge");
+  const stepEl  = document.getElementById("sceneStep");
+  if (!currentScene){
+    titleEl.textContent = "—"; badgeEl.textContent = "—"; stepEl.textContent = "Elige una escena para empezar."; return;
+  }
+  const step = currentScene.steps[sceneStepIndex];
+  titleEl.textContent = currentScene.title;
+  badgeEl.textContent = `${currentScene.badge} · paso ${sceneStepIndex+1}/${currentScene.steps.length}`;
+  stepEl.textContent = explain(step.textByAudience);
+
+  for (const L of LAYER_ORDER) layerState[L] = step.layers.includes(L) || (L==="BONES");
+  buildLayersUI(); applyLayerVisibility(); highlight(step.focus);
+  setTooltip(true, currentScene.title, explain(step.textByAudience));
+  renderScores();
+}
+document.getElementById("btnPrevStep").addEventListener("click", ()=>{ if (!currentScene) return; sceneStepIndex = Math.max(0, sceneStepIndex-1); renderSceneStep(); });
+document.getElementById("btnNextStep").addEventListener("click", ()=>{ if (!currentScene) return; sceneStepIndex = Math.min(currentScene.steps.length-1, sceneStepIndex+1); renderSceneStep(); });
+
+
+/* =========================================================
+   ShoulderX: mapping + gizmo + pose rig + pathologies
+   Compatible with three.js r128 (TransformControls, GLTFLoader, DRACOLoader)
+   ========================================================= */
+(function(){
+  // ---- canonical IDs (use your existing prefixes if possible) ----
+  const IDs = {
+    scapula: "b_scapula",
+    clavicle: "b_clavicle",
+    humerus: "b_humerus",
+    radius: "b_radius",
+    ulna: "b_ulna",
+    hand: "b_hand",
+
+    glenoid: "b_glenoid",
+    acromion: "b_acromion",
+
+    labrum: "lb_glenoid",
+    capsule: "c_gh_capsule",
+    bursa: "bu_subacromial",
+
+    sghl: "l_sghl",
+    mghl: "l_mghl",
+    ighl_ant: "l_ighl_ant",
+    ighl_post: "l_ighl_post",
+    chl: "l_chl",
+    ca: "l_coracoacromial",
+    ac: "l_ac",
+
+    supra: "m_supraspinatus",
+    infra: "m_infraspinatus",
+    subsc: "m_subscapularis",
+    teres: "m_teres_minor",
+    delt: "m_deltoid",
+
+    scapStab: "m_scapular_stabilizers",
+
+    bicepsLH: "t_biceps_long",
+
+    plexus: "n_brachial_plexus",
+    axillary: "n_axillary",
+    suprasc: "n_suprascapular",
+  };
+
+  // ---- auto mapping rules (regex on node name) ----
+  const AUTO = [
+    { re: /scapula/i, id: IDs.scapula },
+    { re: /clavic(le|ula)/i, id: IDs.clavicle },
+    { re: /humerus/i, id: IDs.humerus },
+    { re: /radius/i, id: IDs.radius },
+    { re: /ulna/i, id: IDs.ulna },
+    { re: /hand|carpal|metacarp|phalange/i, id: IDs.hand },
+
+    { re: /glenoid|cavitas\s*glenoidalis|glenoid\s*fossa/i, id: IDs.glenoid },
+    { re: /acromion/i, id: IDs.acromion },
+
+    { re: /labrum/i, id: IDs.labrum },
+    { re: /capsule|capsular/i, id: IDs.capsule },
+    { re: /subacromial.*burs|bursa/i, id: IDs.bursa },
+
+    { re: /superior.*glenohumeral.*lig|sghl/i, id: IDs.sghl },
+    { re: /middle.*glenohumeral.*lig|mghl/i, id: IDs.mghl },
+
+    // IGHL: try to split if names include anterior/posterior band
+    { re: /(inferior.*glenohumeral.*lig.*anterior|ighl.*anterior|anterior.*band.*ighl)/i, id: IDs.ighl_ant },
+    { re: /(inferior.*glenohumeral.*lig.*posterior|ighl.*posterior|posterior.*band.*ighl)/i, id: IDs.ighl_post },
+    { re: /(inferior.*glenohumeral.*lig|ighl)/i, id: IDs.ighl_ant }, // fallback
+
+    { re: /coracohumeral.*lig|chl/i, id: IDs.chl },
+    { re: /coracoacromial.*lig/i, id: IDs.ca },
+    { re: /acromioclavicular.*lig|ac\s*lig/i, id: IDs.ac },
+
+    { re: /supraspinatus/i, id: IDs.supra },
+    { re: /infraspinatus/i, id: IDs.infra },
+    { re: /subscapularis/i, id: IDs.subsc },
+    { re: /teres.*minor/i, id: IDs.teres },
+    { re: /deltoid/i, id: IDs.delt },
+
+    { re: /biceps.*long|long.*head.*biceps|lhb/i, id: IDs.bicepsLH },
+
+    { re: /brachial.*plexus/i, id: IDs.plexus },
+    { re: /axillary.*nerve/i, id: IDs.axillary },
+    { re: /suprascapular.*nerve/i, id: IDs.suprasc },
+  ];
+
+  // Exact overrides (fill later using your Debug names if needed)
+  const OVERRIDE = {
+    "Scapular": IDs.scapula,
+    "Clavicler": IDs.clavicle,
+    "Articular_capsule_of_glenohumeral_jointr": IDs.capsule,
+    "Glenoid_labrumr": IDs.labrum,
+    "Inferior_glenohumeral_ligamentr": IDs.ighl_ant,
+    "Middle_glenohumeral_ligamentr": IDs.mghl,
+    "Superior_glenohumeral_ligamentr": IDs.sghl,
+    "Coracohumeral_ligamentr": IDs.chl,
+    "Coraco-acromial_ligamentr": IDs.ca,
+    "Acromioclavicular_ligamentr": IDs.ac,
+    "Acromioclavicular_capsuler": IDs.ac,
+    "Acromioclavicular_discr": IDs.ac,
+    "Deltoid_muscler": IDs.delt,
+    "Acromial_part_of_deltoid_muscler": IDs.delt,
+    "Clavicular_part_of_deltoid_muscler": IDs.delt,
+    "Spinal_part_of_deltoid_muscler": IDs.delt,
+    "Supraspinatus_muscler": IDs.supra,
+    "Infraspinatus_muscler": IDs.infra,
+    "Subscapularis_muscler": IDs.subsc,
+    "Teres_minor_muscler": IDs.teres,
+    "Long_head_of_biceps_brachiir": IDs.bicepsLH,
+    "Long_head_of_biceps_brachii_tendon_sheathr": IDs.bicepsLH,
+    "Axillary_nerve_-_superior_lateral_br_cutaneous_nerver": IDs.axillary,
+    "Suprascapular_nerver": IDs.suprasc,
+    "Subclavian_nerver": IDs.plexus,
+    "Anterior_divisions_of_brachial_plexusr": IDs.plexus,
+    "Posterior_divisions_of_brachial_plexusr": IDs.plexus,
+    "Lateral_cord_of_brachial_plexusr": IDs.plexus,
+    "Medial_cord_of_brachial_plexusr": IDs.plexus,
+    "Posterior_cord_of_brachial_plexusr": IDs.plexus,
+    "Superior_trunk_of_brachial_plexusr": IDs.plexus,
+    "Middle_trunk_of_brachial_plexusr": IDs.plexus,
+    "Inferior_trunk_of_brachial_plexusr": IDs.plexus,
+    "Dorsal_scapular_nerver": IDs.plexus,
+    "Long_thoracic_nerver": IDs.plexus,
+    "Lateral_pectoral_nerver": IDs.plexus,
+    "Medial_pectoral_nerver": IDs.plexus,
+    "Levator_scapulaer": IDs.scapStab,
+    "Rhomboid_minor_muscler": IDs.scapStab,
+    "Rhomboid_major_muscler": IDs.scapStab,
+    "Serratus_anterior_muscler": IDs.scapStab,
+    "Trapezius_muscler": IDs.scapStab,
+  };
+
+  // Only make "shoulder-relevant" meshes pickable (big perf win on full upper-limb models)
+  const SHOULDER_RE = /(scapula|clavic|humerus|glenoid|acrom|deltoid|supraspinatus|infraspinatus|subscapularis|teres|biceps|glenohumeral|acromioclavicular|coraco|capsule|labrum|subacromial|bursa|brachial_plexus|axillary_nerve|suprascapular_nerve|scapular_nerve|pectoral|trapezius|serratus|rhomboid|levator_scapulae)/i;
+
+
+  const canon = new Map(); // canonicalId -> meshes[]
+  const pickables = new Set(); // meshes
+  const origMat = new Map(); // mesh -> material
+  let currentRoot = null;
+
+  // ---- TransformControls gizmo ----
+  const gizmo = new THREE.TransformControls(camera, renderer.domElement);
+  gizmo.setMode("rotate");
+  gizmo.enabled = false;
+  gizmo.visible = false;
+  gizmo.addEventListener("dragging-changed", (e)=>{ controls.enabled = !e.value; });
+  scene.add(gizmo);
+
+  function setGizmo(on){
+    gizmo.enabled = !!on;
+    gizmo.visible = !!on;
+    const s = document.getElementById("gizmoStatus");
+    if (s) s.textContent = "Gizmo: " + (on ? "ON" : "OFF");
+  }
+  setGizmo(false);
+
+  function setMode(mode){
+    gizmo.setMode(mode);
+    setGizmo(true);
+  }
+
+  // ---- Highlight by canonical group ----
+  const _hiState = new Map();      // mesh -> {emissive:Color, emissiveIntensity:number}
+  const _hiList = [];
+
+  function restoreMaterials(){
+    for (const m of _hiList){
+      const st = _hiState.get(m);
+      if (st && m.material && m.material.emissive){
+        m.material.emissive.copy(st.emissive);
+        m.material.emissiveIntensity = st.emissiveIntensity;
+      }
+    }
+    _hiList.length = 0;
+  }
+
+  function highlight(ids){
+    restoreMaterials();
+    const set = new Set(ids);
+    for (const id of set){
+      const arr = canon.get(id) || [];
+      for (const mesh of arr){
+        const mat = mesh.material;
+        if (!mat || !mat.emissive) continue;
+
+        if (!_hiState.has(mesh)){
+          _hiState.set(mesh, { emissive: mat.emissive.clone(), emissiveIntensity: mat.emissiveIntensity || 0 });
+        }
+        mat.emissive.set(0xffffff);
+        mat.emissiveIntensity = 0.35;
+        _hiList.push(mesh);
+      }
+    }
+  }
+
+  // ---- Build a very simple pose rig (no skeleton needed) ----
+  const rig = { shoulder:null, elbow:null, built:false };
+  const pose = { abd:30, er:20, elbow:20 };
+
+  function bboxCenter(meshes){
+    const box = new THREE.Box3();
+    for (const m of meshes) box.expandByObject(m);
+    const c = new THREE.Vector3(); box.getCenter(c);
+    return c;
+  }
+
+  function reparentPreserveWorld(obj, newParent){
+    const wp = new THREE.Vector3(); obj.getWorldPosition(wp);
+    const wq = new THREE.Quaternion(); obj.getWorldQuaternion(wq);
+    const ws = new THREE.Vector3(); obj.getWorldScale(ws);
+
+    scene.attach(obj);
+    newParent.add(obj);
+
+    const parentWorld = new THREE.Vector3(); newParent.getWorldPosition(parentWorld);
+    obj.position.copy(wp).sub(parentWorld);
+    obj.quaternion.copy(wq);
+    obj.scale.copy(ws);
+  }
+
+  function buildRig(){
+    rig.built = false;
+
+    // Need at least a humerus to do shoulder pose
+    const hum = canon.get(IDs.humerus) || [];
+    if (!hum.length) return;
+
+    // shoulder pivot: between humerus and scapula centers
+    const scap = canon.get(IDs.scapula) || [];
+    const cHum = bboxCenter(hum);
+    const cSca = scap.length ? bboxCenter(scap) : cHum.clone();
+    const gh = cHum.clone().lerp(cSca, 0.35);
+
+    rig.shoulder = new THREE.Group();
+    rig.shoulder.name = "rig_shoulder";
+    rig.shoulder.position.copy(gh);
+    scene.add(rig.shoulder);
+
+    // move humerus meshes under shoulder
+    hum.forEach(m => reparentPreserveWorld(m, rig.shoulder));
+
+    // elbow pivot if forearm exists
+    const fore = [...(canon.get(IDs.radius)||[]), ...(canon.get(IDs.ulna)||[])];
+    if (fore.length){
+      const cFore = bboxCenter(fore);
+      const elbowPt = cHum.clone().lerp(cFore, 0.55);
+
+      rig.elbow = new THREE.Group();
+      rig.elbow.name = "rig_elbow";
+      rig.elbow.position.copy(elbowPt);
+      rig.shoulder.add(rig.elbow);
+      rig.elbow.position.sub(rig.shoulder.position);
+
+      fore.forEach(m => reparentPreserveWorld(m, rig.elbow));
+    }
+
+    rig.built = true;
+    applyPose();
+  }
+
+  
+function sanitizePose(){
+    const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+    pose.abd = clamp(pose.abd, 0, 120);
+    pose.elbow = clamp(pose.elbow, 0, 150);
+
+    // Safety envelope for ER/IR (simple heuristic)
+    const abd = pose.abd;
+    const erMin = -20;
+    let erMax = (abd < 30) ? 60 : (abd < 80) ? 80 : 100;
+    pose.er = clamp(pose.er, erMin, erMax);
+  }
+
+
+  function applyPose(){
+    if (!rig.built || !rig.shoulder) return;
+
+    sanitizePose();
+
+    const abd = THREE.MathUtils.degToRad(pose.abd);
+    const er  = THREE.MathUtils.degToRad(pose.er);
+
+    // Use quaternions to reduce gimbal weirdness
+    rig.shoulder.quaternion.identity();
+    const qAbd = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1), abd);
+    const qEr  = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), er);
+    rig.shoulder.quaternion.multiply(qAbd).multiply(qEr);
+
+    if (rig.elbow){
+      const flex = THREE.MathUtils.degToRad(pose.elbow);
+      rig.elbow.quaternion.identity();
+      const qFlex = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), -flex);
+      rig.elbow.quaternion.multiply(qFlex);
+    }
+  }
+
+  // ---- Mapping/indexing ----
+  function canonicalIdForName(name){
+    if (!name) return null;
+    if (OVERRIDE[name]) return OVERRIDE[name];
+    for (const rule of AUTO){
+      if (rule.re.test(name)) return rule.id;
+    }
+    return null;
+  }
+
+  function indexModel(root){
+    currentRoot = root;
+    canon.clear();
+    pickables.clear();
+    origMat.clear();
+
+    root.traverse((o)=>{
+      if (!o.isMesh) return;
+      const cid = canonicalIdForName(o.name);
+      const shoulderRelevant = !!cid || SHOULDER_RE.test(o.name || "");
+      if (shoulderRelevant){
+        pickables.add(o);
+        origMat.set(o, o.material);
+      }
+      if (cid){
+        o.userData.canonicalId = cid;
+        if (!canon.has(cid)) canon.set(cid, []);
+        canon.get(cid).push(o);
+      }
+    });
+
+    buildRig();
+
+    // Populate pathology dropdown once we have a model
+    populatePathologyUI();
+  }
+
+  // ---- Selection hook (called from existing pointerdown) ----
+  function onSelect(mesh){
+    if (!mesh) { gizmo.detach(); return; }
+    const target =
+      (rig.shoulder && mesh.parent && mesh.parent.name === "rig_shoulder") ? rig.shoulder :
+      (rig.elbow && mesh.parent && mesh.parent.name === "rig_elbow") ? rig.elbow :
+      mesh;
+
+    if (gizmo.enabled) {
+      gizmo.attach(target);
+
+      // Anatomical-safe axes for joints:
+      if (target === rig.shoulder){
+        gizmo.setMode("rotate");
+        gizmo.showX = false; // avoid weird roll
+        gizmo.showY = true;  // ER/IR axis
+        gizmo.showZ = true;  // ABD axis
+      } else if (target === rig.elbow){
+        gizmo.setMode("rotate");
+        gizmo.showX = true;  // flex/extend
+        gizmo.showY = false;
+        gizmo.showZ = false;
+      } else {
+        gizmo.showX = gizmo.showY = gizmo.showZ = true;
+      }
+    }
+
+    // If it has canonical id, highlight that group too
+    const cid = mesh.userData && mesh.userData.canonicalId;
+    if (cid) highlight([cid]);
+  }
+
+  function updatePoseFromRig(){
+    if (!rig.built) return;
+
+    const rad2deg = (r)=>THREE.MathUtils.radToDeg(r);
+
+    if (rig.shoulder){
+      const e = new THREE.Euler().setFromQuaternion(rig.shoulder.quaternion, "ZYX");
+      // Our convention: ABD around Z, ER around Y
+      pose.abd = rad2deg(e.z);
+      pose.er  = rad2deg(e.y);
+    }
+    if (rig.elbow){
+      const e2 = new THREE.Euler().setFromQuaternion(rig.elbow.quaternion, "XYZ");
+      pose.elbow = -rad2deg(e2.x);
+    }
+
+    // Clamp to safe envelope and re-apply (prevents “crazy” postures)
+    applyPose();
+    syncPoseUI();
+  }
+
+  // ---- Pathologies ----
+  const PATHS = [
+    { key:"impingement", label:"Subacromial pain / Impingement",
+      highlight:[IDs.acromion, IDs.bursa, IDs.supra, IDs.delt],
+      pose:{ abd:90, er:10, elbow:10 },
+      info:{
+        medico:"Neer/Hawkins + arco doloroso. Considera cuff, bursa, morfología acromial.",
+        fisio:"Control escapular + cuff; dosificar overhead; progresión de carga.",
+        estudiante:"Dolor al elevar y conflicto subacromial. Mira bursa/supra.",
+        entrenador:"Reduce overhead, mejora técnica y fuerza del manguito."
+      }
+    },
+    { key:"rc_tear", label:"Rotator cuff tear (supra/infraspinatus)",
+      highlight:[IDs.supra, IDs.infra, IDs.subsc, IDs.teres],
+      pose:{ abd:60, er:20, elbow:20 },
+      info:{
+        medico:"Jobe/ER lag/Lift-off según tendón. Correlaciona con imagen.",
+        fisio:"Isométricos → isotónicos → carga funcional; escápula.",
+        estudiante:"Manguito centra la cabeza humeral; si falla, sube el shear.",
+        entrenador:"Evita cargas altas con fatiga; refuerza rotadores."
+      }
+    },
+    { key:"anterior_instability", label:"Anterior instability / Bankart (ABER)",
+      highlight:[IDs.labrum, IDs.capsule, IDs.ighl_ant],
+      pose:{ abd:90, er:90, elbow:20 },
+      info:{
+        medico:"Apprehension + relocation. Labrum/IGHL anterior clave.",
+        fisio:"Evitar ABER temprano; propiocepción + RC + escápula.",
+        estudiante:"ABER es la posición provocativa anterior.",
+        entrenador:"Técnica overhead; vuelve a rango extremo gradualmente."
+      }
+    },
+    { key:"mdi", label:"Inestabilidad multidireccional (MDI)",
+      highlight:[IDs.capsule, IDs.labrum, IDs.ighl_ant, IDs.ighl_post],
+      pose:{ abd:45, er:20, elbow:20 },
+      info:{
+        medico:"Sulcus + multidireccional. Considera hiperlaxitud.",
+        fisio:"Rehab largo: control escapular + RC + carga progresiva.",
+        estudiante:"MDI = laxitud + control dinámico bajo.",
+        entrenador:"Evita extremos; estabilidad antes que fuerza."
+      }
+    },
+    { key:"frozen", label:"Capsulitis adhesiva (frozen shoulder)",
+      highlight:[IDs.capsule],
+      pose:{ abd:40, er:5, elbow:20 },
+      info:{
+        medico:"Patrón capsular: ER↓ ABD↓ IR↓. Dx diferencial.",
+        fisio:"Movilización gradual + educación + carga dosificada.",
+        estudiante:"No es solo dolor: es restricción capsular.",
+        entrenador:"Evita estirar fuerte; constancia suave."
+      }
+    },
+    { key:"biceps", label:"Tendinopatía bíceps largo / sospecha SLAP",
+      highlight:[IDs.bicepsLH, IDs.labrum],
+      pose:{ abd:60, er:30, elbow:90 },
+      info:{
+        medico:"Speed/Yergason/O’Brien (si SLAP). Correlaciona con clínica.",
+        fisio:"Carga progresiva tendón + escápula + RC.",
+        estudiante:"Bíceps largo se asocia al labrum superior.",
+        entrenador:"Reduce tirones; reintroduce progresivo."
+      }
+    }
+  ];
+
+  function populatePathologyUI(){
+    const sel = document.getElementById("pathologySelect");
+    if (!sel) return;
+    if (sel.options.length) return;
+    for (const p of PATHS){
+      const o = document.createElement("option");
+      o.value = p.key;
+      o.textContent = p.label;
+      sel.appendChild(o);
+    }
+  }
+
+  function applyPathology(key){
+    const p = PATHS.find(x => x.key === key);
+    if (!p) return;
+
+    highlight(p.highlight);
+
+    if (p.pose){
+      pose.abd = p.pose.abd;
+      pose.er = p.pose.er;
+      pose.elbow = p.pose.elbow;
+      syncPoseUI();
+      applyPose();
+    }
+
+    const title = document.getElementById("pathTitle");
+    const info = document.getElementById("pathInfo");
+    if (title) title.textContent = p.label;
+
+    const role = (typeof audience !== "undefined") ? audience : "estudiante";
+    if (info) info.textContent = p.info[role] || p.info.estudiante || "";
+  }
+
+  function clearPathology(){
+    restoreMaterials();
+    const title = document.getElementById("pathTitle");
+    const info = document.getElementById("pathInfo");
+    if (title) title.textContent = "—";
+    if (info) info.textContent = "Selecciona una patología y pulsa Aplicar.";
+  }
+
+  // ---- UI wiring ----
+  
+function hookPoseSlider(id, outId, key){
+    const s = document.getElementById(id);
+    const out = document.getElementById(outId);
+    if (!s || !out) return;
+
+    const clampPose = ()=>{
+      // Baseline limits (deg)
+      pose.abd = clamp(pose.abd, 0, 120);      // abduction
+      pose.elbow = clamp(pose.elbow, 0, 150);  // elbow flexion
+
+      // ER/IR envelope depends on ABD (simple safety envelope, not a full biomech model)
+      const abd = pose.abd;
+      let erMin = -20;   // allow mild IR as negative ER
+      let erMax = (abd < 30) ? 60 : (abd < 80) ? 80 : 100;
+      pose.er = clamp(pose.er, erMin, erMax);
+
+      // Keep sliders coherent if user clamped
+      const sAbd = document.getElementById("s_pose_abd");
+      const sEr  = document.getElementById("s_pose_er");
+      const sEl  = document.getElementById("s_pose_elbow");
+      if (sAbd) sAbd.value = String(pose.abd);
+      if (sEr)  sEr.value  = String(pose.er);
+      if (sEl)  sEl.value  = String(pose.elbow);
+
+      const vAbd = document.getElementById("v_pose_abd");
+      const vEr  = document.getElementById("v_pose_er");
+      const vEl  = document.getElementById("v_pose_elbow");
+      if (vAbd) vAbd.textContent = String(pose.abd);
+      if (vEr)  vEr.textContent  = String(pose.er);
+      if (vEl)  vEl.textContent  = String(pose.elbow);
+    };
+
+    const sync = ()=>{
+      pose[key] = Number(s.value);
+      clampPose();
+      out.textContent = String(pose[key]);
+      applyPose();
+    };
+
+    s.addEventListener("input", sync, {passive:true});
+    sync();
+  }
+
+
+  function syncPoseUI(){
+    const map = [
+      ["s_pose_abd","v_pose_abd","abd"],
+      ["s_pose_er","v_pose_er","er"],
+      ["s_pose_elbow","v_pose_elbow","elbow"],
+    ];
+    for (const [sid, vid, k] of map){
+      const s = document.getElementById(sid);
+      const v = document.getElementById(vid);
+      if (s && v){
+        s.value = String(pose[k]);
+        v.textContent = String(pose[k]);
+      }
+    }
+  }
+
+  document.getElementById("btnTMove")?.addEventListener("click", ()=> setMode("translate"));
+  document.getElementById("btnTRotate")?.addEventListener("click", ()=> setMode("rotate"));
+  document.getElementById("btnTScale")?.addEventListener("click", ()=> setMode("scale"));
+
+  hookPoseSlider("s_pose_abd","v_pose_abd","abd");
+  hookPoseSlider("s_pose_er","v_pose_er","er");
+  hookPoseSlider("s_pose_elbow","v_pose_elbow","elbow");
+
+  document.getElementById("btnApplyPathology")?.addEventListener("click", ()=>{
+    const key = document.getElementById("pathologySelect")?.value;
+    applyPathology(key);
+  });
+  document.getElementById("btnClearPathology")?.addEventListener("click", clearPathology);
+
+  // Expose minimal API
+  window.ShoulderX = {
+    IDs,
+    PATHS,
+    indexModel,
+    onSelect,
+    setMode,
+    setGizmo,
+    applyPathology,
+    clearPathology,
+    applyPose,
+    updatePoseFromRig,
+    pose
+  };
+
+  // Keep joint rotations anatomically safe when user drags gizmo
+  gizmo.addEventListener("objectChange", ()=>{
+    if (window.ShoulderX && typeof window.ShoulderX.updatePoseFromRig === "function") {
+      window.ShoulderX.updatePoseFromRig();
+    }
+  });
+
+  // When a new model is set by existing loader, index it.
+  // We patch setModel if it exists.
+  if (typeof setModel === "function"){
+    const _setModel = setModel;
+    window.setModel = function(newRoot){
+      _setModel(newRoot);
+      try { window.ShoulderX.indexModel(newRoot); } catch(e){ console.warn("ShoulderX indexModel failed:", e); }
+    };
+  }
+})();
+
+
+/* ===== init ===== */
+buildLayersUI();
+buildStructuresUI("");
+buildScenesListUI();
+resize();
+loadGLB("./models/upper-limb.glb");
+
+function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+animate();
+</script>
+</body>
+</html>
